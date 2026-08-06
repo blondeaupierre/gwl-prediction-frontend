@@ -13,10 +13,9 @@ type Well = {
   n_measures: number;
 };
 
-// Fonction pour créer une icône Leaflet HTML/Tailwind moderne
 const createCustomIcon = () => {
   return L.divIcon({
-    className: "custom-well-icon", // Classe pour reset les styles par défaut de Leaflet
+    className: "custom-well-icon",
     html: `
       <div class="relative flex items-center justify-center w-8 h-8 group cursor-pointer">
         <!-- Halo / Effet de pulse discret en fond -->
@@ -32,8 +31,8 @@ const createCustomIcon = () => {
       </div>
     `,
     iconSize: [32, 32],
-    iconAnchor: [16, 16], // Ancrage au centre du point
-    popupAnchor: [0, -16], // Positionnement du popup au-dessus du marqueur
+    iconAnchor: [16, 16],
+    popupAnchor: [0, -16],
   });
 };
 
@@ -41,11 +40,12 @@ function Wells() {
   const [wells, setWells] = useState<Well[]>([]);
   const map = useMap();
 
-  // Création de l'icône personnalisée une seule fois
   const customIcon = useMemo(() => createCustomIcon(), []);
 
   useEffect(() => {
-    fetch("http://localhost:8000/wells")
+    const apiUrl = import.meta.env.VITE_API_URL;
+
+    fetch(`${apiUrl}/wells`)
       .then((response) => response.json())
       .then((data) => setWells(data))
       .catch((error) => console.error("Erreur chargement puits :", error));
@@ -72,10 +72,9 @@ function Wells() {
 
   const handlePopupOpen = useCallback(
     (e: LeafletEvent) => {
-      // @ts-ignore - fourni par Leaflet sur l'événement popupopen
       const popupEl: HTMLElement | undefined = e.popup?.getElement();
-      // @ts-ignore
       const markerLatLng = e.popup?.getLatLng();
+
       if (!popupEl || !markerLatLng) return;
 
       requestAnimationFrame(() => {
@@ -95,7 +94,7 @@ function Wells() {
         <Marker
           key={well.well_id}
           position={[well.lat, well.lon]}
-          icon={customIcon} // <-- Application du marqueur custom
+          icon={customIcon}
           eventHandlers={{
             popupopen: handlePopupOpen,
           }}
