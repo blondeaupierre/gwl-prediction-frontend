@@ -8,3 +8,25 @@ html, body, #root {
   background: transparent !important;
   border: none !important;
 }
+
+/* Desktop */
+.well-popup .leaflet-popup-content {
+    width: 700px !important;
+    margin: 12px;
+}
+
+.well-chart-container {
+    width: 700px;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+    .well-popup .leaflet-popup-content {
+        width: calc(100vw - 50px) !important;
+        max-width: calc(100vw - 50px);
+    }
+
+    .well-chart-container {
+        width: 100%;
+    }
+}

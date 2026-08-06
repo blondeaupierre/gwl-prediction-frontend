@@ -99,7 +99,7 @@ function Wells() {
             popupopen: handlePopupOpen,
           }}
         >
-          <Popup maxWidth={750} autoPan={false}>
+          <Popup maxWidth={750} autoPan={false} className="well-popup">
             <div className="p-1 font-sans">
               <div className="mb-2 pb-2 border-b border-slate-100">
                 <div className="font-bold text-slate-800 text-sm">Puits : {well.well_id}</div>

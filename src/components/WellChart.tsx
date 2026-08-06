@@ -251,7 +251,7 @@ function WellChart({ wellId }: { wellId: string }) {
     };
 
     return (
-        <div className="w-[700px] p-4 rounded-xl border border-slate-200 bg-white shadow-sm font-sans">
+        <div className="well-chart-container p-3 sm:p-4 rounded-xl border border-slate-200 bg-white shadow-sm font-sans">
             <div className="flex flex-wrap items-center gap-5 mb-3 pb-3 border-b border-slate-200">
                 <LegendToggle
                     label="Historique"
@@ -311,8 +311,11 @@ function WellChart({ wellId }: { wellId: string }) {
                 option={option}
                 notMerge={true}
                 style={{
-                    height: "350px",
+                    height: 350,
                     width: "100%"
+                }}
+                opts={{
+                    renderer: "canvas"
                 }}
             />
         </div>
