@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import ReactECharts from "echarts-for-react";
 import {
     getHistory,
@@ -45,7 +45,7 @@ function WellChart({ wellId }: { wellId: string }) {
     const [forecastTabIclZeroShot, setForecastTabIclZeroShot] = useState<any[]>([]);
     const [testResultsXGB, setTestResultsXGB] = useState<any[]>([]);
     const [testResultsTabIclZeroShot, setTestResultsTabIclZeroShot] = useState<any[]>([]);
-    const [selectedHorizon, setSelectedHorizon] = useState<number | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
     const [visibleGroups, setVisibleGroups] = useState({
         history: true,
@@ -54,34 +54,23 @@ function WellChart({ wellId }: { wellId: string }) {
     });
 
     useEffect(() => {
-        getHistory(wellId)
-            .then((res) => setHistory(res.data));
+            setIsLoading(true);
 
-        getForecastXGB(wellId)
-            .then((res) => setForecastXGB(res.data));
-
-        getForecastTabIclZeroShot(wellId)
-            .then((res) => setForecastTabIclZeroShot(res.data));
-
-        getTestResultsXGB(wellId)
-            .then((res) => setTestResultsXGB(res.data));
-
-        getTestResultsTabIclZeroShot(wellId)
-            .then((res) => setTestResultsTabIclZeroShot(res.data));
-    }, [wellId]);
-
-    const availableHorizons = useMemo(() => {
-        const horizons = new Set<number>();
-        testResultsXGB.forEach((x) => horizons.add(Number(x.horizon)));
-        testResultsTabIclZeroShot.forEach((x) => horizons.add(Number(x.horizon)));
-        return Array.from(horizons).sort((a, b) => a - b);
-    }, [testResultsXGB, testResultsTabIclZeroShot]);
-
-    useEffect(() => {
-        if (availableHorizons.length > 0 && !availableHorizons.includes(selectedHorizon ?? -1)) {
-            setSelectedHorizon(availableHorizons[0]);
-        }
-    }, [availableHorizons]);
+            Promise.all([
+                getHistory(wellId),
+                getForecastXGB(wellId),
+                getForecastTabIclZeroShot(wellId),
+                getTestResultsXGB(wellId),
+                getTestResultsTabIclZeroShot(wellId)
+            ]).then(([h, fXGB, fTabICL, tXGB, tTabICL]) => {
+                setHistory(h.data);
+                setForecastXGB(fXGB.data);
+                setForecastTabIclZeroShot(fTabICL.data);
+                setTestResultsXGB(tXGB.data);
+                setTestResultsTabIclZeroShot(tTabICL.data);
+                setIsLoading(false);
+            });
+        }, [wellId]);
 
     const toggleGroup = (group: keyof typeof visibleGroups) => {
         setVisibleGroups((prev) => ({ ...prev, [group]: !prev[group] }));
@@ -134,23 +123,19 @@ function WellChart({ wellId }: { wellId: string }) {
           ]
         : rawForecastTabIclZeroShotData;
 
-    const filteredTestResultsXGB = testResultsXGB
-        .filter((x) => selectedHorizon === null || Number(x.horizon) === selectedHorizon)
-        .sort((a, b) => new Date(a.target_date).getTime() - new Date(b.target_date).getTime());
+    const testResultsXGBData: Point[] = [...testResultsXGB]
+        .sort((a, b) => new Date(a.target_date).getTime() - new Date(b.target_date).getTime())
+        .map((x) => [
+            new Date(x.target_date).getTime(),
+            x.predicted_gwl !== null && !isNaN(Number(x.predicted_gwl)) ? Number(Number(x.predicted_gwl).toFixed(2)) : null
+        ]);
 
-    const filteredTestResultsTabIclZeroShot = testResultsTabIclZeroShot
-        .filter((x) => selectedHorizon === null || Number(x.horizon) === selectedHorizon)
-        .sort((a, b) => new Date(a.target_date).getTime() - new Date(b.target_date).getTime());
-
-    const testResultsXGBData: Point[] = filteredTestResultsXGB.map((x) => [
-        new Date(x.target_date).getTime(),
-        x.predicted_gwl !== null && !isNaN(Number(x.predicted_gwl)) ? Number(Number(x.predicted_gwl).toFixed(2)) : null
-    ]);
-
-    const testResultsTabIclZeroShotData: Point[] = filteredTestResultsTabIclZeroShot.map((x) => [
-        new Date(x.target_date).getTime(),
-        x.predicted_gwl !== null && !isNaN(Number(x.predicted_gwl)) ? Number(Number(x.predicted_gwl).toFixed(2)) : null
-    ]);
+    const testResultsTabIclZeroShotData: Point[] = [...testResultsTabIclZeroShot]
+        .sort((a, b) => new Date(a.target_date).getTime() - new Date(b.target_date).getTime())
+        .map((x) => [
+            new Date(x.target_date).getTime(),
+            x.predicted_gwl !== null && !isNaN(Number(x.predicted_gwl)) ? Number(Number(x.predicted_gwl).toFixed(2)) : null
+        ]);
 
     const values = [
         ...historyData.map((x) => x[1]),
@@ -215,6 +200,8 @@ function WellChart({ wellId }: { wellId: string }) {
     ].filter(Boolean);
 
     const option = {
+        animationDuration: 0,
+
         tooltip: {
             trigger: "axis",
             valueFormatter: (value: any) => (value !== null && value !== undefined ? Number(value).toFixed(2) : "-")
@@ -250,6 +237,14 @@ function WellChart({ wellId }: { wellId: string }) {
         series
     };
 
+    if (isLoading) {
+            return (
+                <div className="well-chart-container p-3 sm:p-4 rounded-xl border border-slate-200 bg-white shadow-sm font-sans flex items-center justify-center" style={{ height: 350 }}>
+                    <span className="text-sm text-slate-400">Chargement…</span>
+                </div>
+            );
+        }
+
     return (
         <div className="well-chart-container p-3 sm:p-4 rounded-xl border border-slate-200 bg-white shadow-sm font-sans">
             <div className="flex flex-wrap items-center gap-5 mb-3 pb-3 border-b border-slate-200">
@@ -271,40 +266,6 @@ function WellChart({ wellId }: { wellId: string }) {
                     checked={visibleGroups.tabicl}
                     onChange={() => toggleGroup("tabicl")}
                 />
-            </div>
-
-            <div className="mb-3 min-h-[62px]">
-                {availableHorizons.length > 0 && (
-                    <>
-                        <div className="flex items-center gap-2">
-                            <label htmlFor="horizon-select" className="text-sm font-medium text-slate-800">
-                                Horizon de test
-                            </label>
-                            <select
-                                id="horizon-select"
-                                value={selectedHorizon ?? ""}
-                                onChange={(e) => setSelectedHorizon(Number(e.target.value))}
-                                className="px-2 py-0.5 text-sm border border-slate-300 rounded bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                {availableHorizons.map((h) => (
-                                    <option key={h} value={h}>
-                                        {h} mois
-                                    </option>
-                                ))}
-                            </select>
-                            <span
-                                title="L'horizon est le nombre de mois entre la date d'observation utilisée par le modèle et la date qu'il essaie de prédire. Un horizon de 1 mois teste une prédiction à court terme ; un horizon de 24 ou 36 mois teste une prédiction beaucoup plus difficile, à long terme."
-                                className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-slate-400 text-slate-500 text-[11px] cursor-help hover:bg-slate-100 transition-colors"
-                            >
-                                ?
-                            </span>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                            Nombre de mois entre la donnée utilisée par le modèle et la date prédite testée.
-                            Plus l'horizon est grand, plus la prédiction est difficile.
-                        </p>
-                    </>
-                )}
             </div>
 
             <ReactECharts
